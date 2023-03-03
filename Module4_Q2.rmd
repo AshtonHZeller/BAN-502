@@ -1,0 +1,33 @@
+```{r}
+install.packages("VIM")
+install.packages("mice")
+
+library(VIM)
+library(mice)
+library(tidyverse)
+library(readr)
+class_grades <- read_csv("~/Desktop/Grad  School /BAN 502/class-grades.csv")
+```
+## Tutorial, midterm, takehome and final are missing data
+```{r}
+str(class_grades)
+summary(class_grades)
+```
+```{r}
+vim_plot = aggr(class_grades, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+```{r}
+class_grades_rowdel = class_grades%>% drop_na()
+```
+
+```{r}
+set.seed(123) 
+imp_mice = mice(class_grades, m=5, method='pmm', printFlag=FALSE)
+summary(imp_mice)
+```
+```{r}
+class_grades_complete = complete(imp_mice) 
+summary(class_grades_complete)
+```
+
+

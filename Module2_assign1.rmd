@@ -1,0 +1,54 @@
+```{r}
+install.packages("tidymodels")
+install.packages("GGally")
+install.packages("lmtest")
+
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(GGally)
+library(lmtest)
+```
+
+```{r}
+air = airquality
+str(air)
+summary(air)
+ggpairs(air)
+```
+```{r}
+air2 = air %>% drop_na()
+ggpairs(air2)
+```
+```{r}
+ggplot(data=air2, aes(x=Temp, y=Ozone)) +
+  geom_point()
+```
+
+```{r}
+question11 = recipe(Ozone ~ Temp, air2)
+lm_model = 
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow =
+  workflow() %>% 
+  add_model(lm_model) %>%
+  add_recipe(question11)
+
+lm_fit = fit(lm_wflow, air2)
+  
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+
+```{r}
+confint(lm_fit$fit$fit$fit)
+```
+```{r}
+test =data.frame(Temp = c(80))
+predict(lm_fit,new_data = test)
+```
+

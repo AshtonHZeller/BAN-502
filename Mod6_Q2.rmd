@@ -1,0 +1,70 @@
+```{r}
+install.packages("cluster")
+install.packages("factoextra")
+install.packages("dendextend")
+
+library(cluster)
+library(factoextra)
+library(dendextend)
+library(tidyverse)
+library(tidymodels)
+library(readr)
+trucks <- read_csv("~/Desktop/Grad  School /BAN 502/Data Sets/trucks-1.csv")
+```
+```{r}
+ggplot(data = trucks, aes(x=Distance, y=Speeding)) + geom_point()
+```
+```{r}
+kmeans_recipe = recipe(~ Distance + Speeding, trucks)
+
+trucks_sc = kmeans_recipe %>% 
+  step_scale(all_numeric()) %>%
+  step_center(all_numeric()) 
+
+trucks_sc = prep(trucks_sc, trucks)
+trucks_cleaned = bake(trucks_sc, trucks)
+```
+
+```{r}
+summary(trucks_sc)
+```
+
+```{r}
+set.seed(64)
+clusts = 
+  tibble(k = 2 ) %>%
+  mutate(
+    kclust = map(k, ~kmeans(trucks_cleaned, .x)),
+    tidied = map(kclust, tidy),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, trucks)
+  )
+
+clusts
+```
+```{r}
+clusters = 
+  clusts %>%
+  unnest(cols = c(tidied))
+
+assignments = 
+  clusts %>% 
+  unnest(cols = c(augmented))
+
+clusterings = 
+  clusts %>%
+  unnest(cols = c(glanced))
+```
+
+```{r}
+p1 = 
+  ggplot(assignments, aes(x = Distance, y = Speeding)) +
+  geom_point(aes(color = .cluster), alpha = 0.8) + 
+  facet_wrap(~ k)
+p1
+```
+```{r}
+
+```
+
+

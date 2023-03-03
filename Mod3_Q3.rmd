@@ -1,0 +1,178 @@
+```{r}
+install.packages("e1071")
+install.packages("ROCR")
+install.packages("glmnet")
+
+library(e1071)
+library(ROCR)
+library(tidyverse)
+library(tidymodels)
+library(readr)
+library(dplyr)
+library(glmnet)
+parole <- read_csv("~/Desktop/Grad  School /BAN 502/parole.csv")
+
+```
+```{r}
+parole = parole %>% mutate(male = as_factor(male)) %>% 
+  mutate(male = fct_recode(male, "female" = "0", "male" = "1" )) 
+
+parole = parole %>% mutate(race = as_factor(race)) %>% 
+  mutate(race = fct_recode(race, "otherwise" = "2", "white" = "1" )) 
+
+parole = parole %>% mutate(state = as_factor(state)) %>% 
+  mutate(state = fct_recode(state, "Kentucky" = "2", "Louisiana" = "3", "Virginia" = "4", "other state" = "1")) 
+
+parole = parole %>% mutate(crime = as_factor(crime)) %>% 
+  mutate(crime = fct_recode(crime, "larceny" = "2", "drug-related" = "3", "driving-related" = "4", "other crime" = "1")) 
+
+parole = parole %>% mutate(multiple.offenses = as_factor(multiple.offenses)) %>% 
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "otherwise" = "0", "multiple offenses" = "1")) 
+
+parole = parole %>% mutate(violator = as_factor(violator)) %>% 
+  mutate(violator = fct_recode(violator, "completed parole" = "0", "violated parole" = "1")) 
+```
+
+```{r}
+summary(parole)
+```
+
+```{r}
+set.seed(12345) 
+parole_split = initial_split(parole, prop = 0.70, strata = violator)
+train = training(parole_split)
+test = testing(parole_split)
+
+levels(train$violator)
+
+train = train %>% mutate(violator = fct_relevel(violator, c("No", "Yes")))
+levels(train$violator)
+```
+
+```{r}
+parole_model = 
+  logistic_reg(mode = "classification") %>% 
+  set_engine("glm") 
+
+parole_recipe = recipe(violator ~ state, train)
+
+logreg_wf = workflow() %>%
+  add_recipe(parole_recipe) %>% 
+  add_model(parole_model)
+
+parole_fit = fit(logreg_wf, train)
+```
+
+```{r}
+summary(parole_fit$fit$fit$fit)
+```
+
+
+```{r}
+parole_model2 = 
+  logistic_reg(mode = "classification") %>% 
+  set_engine("glm") 
+
+parole_recipe2 = recipe(violator ~ state + multiple.offenses + race, train)
+
+logreg_wf = workflow() %>%
+  add_recipe(parole_recipe2) %>% 
+  add_model(parole_model2)
+
+parole_fit2 = fit(logreg_wf, train)
+```
+
+```{r}
+summary(parole_fit2$fit$fit$fit)
+```
+
+```{r}
+newdata = data.frame(state = "Louisiana", multiple.offenses = "multiple offenses", race = "white")
+predict(parole_fit2, newdata, type="prob")
+```
+
+
+```{r}
+predictions = predict(parole_fit2, train, type="prob") 
+head(predictions)
+```
+```{r}
+predictions = predict(parole_fit2, train, type="prob")[2]
+head(predictions)
+```
+
+```{r}
+ROCRpred = prediction(predictions, train$violator) 
+ROCRperf = performance(ROCRpred, "tpr", "fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+```
+
+```{r}
+as.numeric(performance(ROCRpred, "auc")@y.values)
+```
+
+```{r}
+opt.cut = function(perf, pred){
+    cut.ind = mapply(FUN=function(x, y, p){
+        d = (x - 0)^2 + (y-1)^2
+        ind = which(d == min(d))
+        c(sensitivity = y[[ind]], specificity = 1-x[[ind]], 
+            cutoff = p[[ind]])
+    }, perf@x.values, perf@y.values, pred@cutoffs)
+}
+print(opt.cut(ROCRperf, ROCRpred))
+```
+
+```{r}
+t1 = table(train$violator,predictions > 0.2015788)
+t1
+```
+```{r}
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+
+```{r}
+#sensitivity 
+36/(18+36)
+
+```
+
+### Question 14 
+```
+
+```{r}
+predictions2 = predict(parole_fit2, test, type="prob") 
+head(predictions2)
+```
+```{r}
+predictions2 = predict(parole_fit2, test, type="prob")[2]
+head(predictions2)
+```
+
+
+```{r}
+ROCRpred_2 = prediction(predictions2, test$violator) 
+ROCRperf_2 = performance(ROCRpred, "tpr", "fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+```
+```{r}
+opt.cut = function(perf, pred){
+    cut.ind = mapply(FUN=function(x, y, p){
+        d = (x - 0)^2 + (y-1)^2
+        ind = which(d == min(d))
+        c(sensitivity = y[[ind]], specificity = 1-x[[ind]], 
+            cutoff = p[[ind]])
+    }, perf@x.values, perf@y.values, pred@cutoffs)
+}
+print(opt.cut(ROCRperf, ROCRpred))
+```
+```{r}
+t2 = table(test$violator,predictions2 > 0.05)
+t2
+(t2[1,1]+t1[2,2])/nrow(test)
+```
+```{r}
+t2 = table(test$violator,predictions > 0.05)
+t2
+```
+

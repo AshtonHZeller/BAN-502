@@ -1,0 +1,99 @@
+```{r}
+install.packages("glmnet")
+install.packages("ggcorrplot")
+install.packages("car")
+install.packages("splines")
+install.packages("MASS")
+
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(tidymodels)
+library(GGally)
+library(glmnet)
+library(ggcorrplot)
+library(car)
+library(splines)
+library(lubridate)
+library(lmtest)
+library(MASS)
+library(dplyr)
+
+bike<- read_csv("~/Desktop/Grad  School /BAN 502/bike_cleaned-3.csv")
+```
+
+```{r}
+bike = bike %>% mutate(dteday = mdy(dteday))
+bike = bike %>% mutate_if(is.character, as.factor)
+bike = bike %>% mutate(hr = as_factor(hr))
+```
+
+```{r}
+summary(bike)
+glimpse(bike)
+```
+```{r}
+ggcorr(bike, label = "TRUE", label_round = 2)
+```
+
+```{r}
+ggplot(bike, aes(x=hr, y=count)) + geom_point()
+```
+```{r}
+bike_recipe = recipe(count ~ hr, bike)
+
+lm_model =
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(bike_recipe)
+
+lm_fit = fit(lm_wflow, bike)
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+```{r}
+ggplot(bike, aes(x=temp, y=count)) + geom_point()
+```
+
+```{r}
+bike_recipe2 = recipe(count ~ hr + temp, bike)
+
+lm_model =
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(bike_recipe2)
+
+lm_fit = fit(lm_wflow, bike)
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+```{r}
+bike_recipe3 = recipe(count ~ temp + atemp, bike)
+
+lm_model =
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(bike_recipe3)
+
+lm_fit = fit(lm_wflow, bike)
+```
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+

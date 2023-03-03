@@ -1,0 +1,46 @@
+```{r}
+library(tidyverse)
+library(lubridate)
+library(tidymodels)
+library(readr)
+library(readr)
+library(GGally)
+bike_cleaned_4 <- read_csv("~/Desktop/Grad  School /BAN 502/bike_cleaned-4.csv")
+```
+```{r}
+bike = bike_cleaned_4 %>% mutate(dteday = mdy(dteday))
+bike = bike_cleaned_4 %>% mutate_if(is.character, as.factor)
+bike = bike_cleaned_4 %>% mutate(hr = as_factor(hr))
+```
+
+```{r}
+set.seed(1234)
+bike_split = initial_split(bike, prop = 0.70, strata = count)
+train = training(bike_split)
+test = testing(bike_split)
+```
+
+```{r}
+bike_recipe = recipe(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, train)
+
+lm_model =
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(bike_recipe)
+
+lm_fit = fit(lm_wflow, train)
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+
+```{r}
+lm_fit %>% predict(test) %>% bind_cols(test) %>% metrics(truth = count, estimate = .pred)
+```
+
+
